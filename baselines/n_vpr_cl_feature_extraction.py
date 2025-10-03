@@ -2,9 +2,69 @@ import os, glob
 from os.path import isfile
 from collections import OrderedDict
 import torch
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
+from tqdm import tqdm
+import cv2
 
-from N_VPR_CL.model import SynSSparkEncoder
+from .N_VPR_CL.model import SynSSparkEncoder
+
+
+class _EventVGGPreprocess(Dataset):
+    """
+    - Resizes to 224x224
+    - Converts to RGB by default (see note), uint8-like scale (no /255)
+    - Subtracts channel means from EventVLAD Imagenet VGG meta (std=1)
+    """
+
+    def __init__(self, items, rgb_input=True):
+        self.items = items
+        self.rgb_input = rgb_input
+        # From Imagenet_matconvnet_vgg_verydeep_16_dag.meta (RGB order)
+        self.mean = np.array([122.7449417, 114.9440994, 101.6417770], dtype=np.float32)
+
+    def __len__(self):
+        return len(self.items)
+
+    def _load(self, it):
+        if isinstance(it, (np.ndarray, np.generic)):
+            img = it
+        else:
+            img = cv2.imread(it, cv2.IMREAD_UNCHANGED)
+            if img is None:
+                raise FileNotFoundError(f"Could not read image: {it}")
+
+        if img.ndim == 2:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        elif img.shape[2] == 4:
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            if self.rgb_input:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
+            if self.rgb_input:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+
+        # matconv-style: keep [0..255]-scale floats, subtract means
+        img = img.astype(np.float32)
+        img -= self.mean  # RGB means
+        img = np.transpose(img, (2, 0, 1))  # CHW
+        return torch.from_numpy(img)
+
+    def __getitem__(self, idx):
+        return self._load(self.items[idx])
+
+
+# class _Dataset(Dataset):
+#     def __init__(self, np_imgs, transform=None):
+#         self.np_img_arr = np_imgs
+
+#     def __len__(self):
+#         return len(self.np_img_arr)
+
+#     def __getitem__(self, idx):
+#         return torch.from_numpy(self.np_img_arr[:, :, idx, :])
 
 
 def _device(dev=None):
@@ -79,8 +139,7 @@ def load_simclr_encoder(weights_path: str, device=None):
     simclr_save = torch.load(weights_path)
     mdl_state_dict = _remap_state_keys(simclr_save["state_dict"])
     mdl_state_dict = _extract_encoder_state(mdl_state_dict)
-    model.load_state_dict(mdl_state_dict)
-    model.to(dev).eval()
+    model.load_state_dict(mdl_state_dict, strict=True)
     return model
 
 
@@ -114,7 +173,7 @@ def extract_features(
     feats = []
     for batch in tqdm(dl, desc="EventVLAD", leave=False):
         batch = batch.to(dev, non_blocking=True)
-        out = model.feature_extract(batch)  # may be [B, D] or [D] when B==1
+        out = model(batch)  # may be [B, D] or [D] when B==1
         if out.dim() == 1:  # <— ensure 2-D
             out = out.unsqueeze(0)  # -> [1, D]
         out_cpu = out.detach().cpu().to(torch.float32).numpy()

@@ -3,7 +3,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-from N_VPR_CL.SimCLR.simclr.builder import SimCLR
+from .SimCLR.simclr.builder import SimCLR
 
 # class SynSSparkNN(nn.Module):
 #     def __init__(self, num_classes=1024):

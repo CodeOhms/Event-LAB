@@ -8,5 +8,23 @@
     "adapter": "Debugpy",
     "program": "$ZED_FILE",
     "request": "launch"
+  },
+  {
+    "adapter": "Debugpy",
+    "label": "eventvlad",
+    "request": "launch",
+    "python": "\"$ZED_CUSTOM_PYTHON_ACTIVE_ZED_TOOLCHAIN\"",
+    "args": ["eventvlad", "brisbane_event", "sunset2", "sunrise"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "program": "eventlab_run.py"
+  },
+  {
+    "adapter": "Debugpy",
+    "label": "n_vpr_cl",
+    "request": "launch",
+    "python": "\"$ZED_CUSTOM_PYTHON_ACTIVE_ZED_TOOLCHAIN\"",
+    "args": ["n_vpr_cl", "brisbane_event", "sunset2", "sunrise"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "program": "eventlab_run.py"
   }
 ]

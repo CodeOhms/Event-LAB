@@ -1,4 +1,15 @@
-import os, yaml, time
+# import os, yaml, time
+# import numpy as np
+# from pathlib import Path
+# from baselines.EventBaselineLab import EventBaseline
+# from baselines.download_baseline import clone_repo
+# from baselines.VPR_Tutorial.evaluation.metrics import recallAtK, createPR
+# import prettytable
+# import openpyxl
+# from datetime import datetime
+# import re
+
+import os, tempfile, subprocess, yaml
 import numpy as np
 from pathlib import Path
 from baselines.EventBaselineLab import EventBaseline
@@ -6,33 +17,35 @@ from baselines.download_baseline import clone_repo
 from baselines.VPR_Tutorial.evaluation.metrics import recallAtK, createPR
 import prettytable
 import openpyxl
-from datetime import datetime
-import re
+from datetime import datetime, timezone
+import re, gdown, time
+import utils.functional as FUNC
 
 
-class name_baseline(EventBaseline):
+class n_vpr_cl_baseline(EventBaseline):
     def __init__(self):
         super().__init__()
 
         self.name = "n_vpr_cl"
         # Check if the baseline repository is already cloned
-        self.repo_path = "./baselines/n_vpr_cl"
+        self.repo_path = "./baselines/N_VPR_CL"
         # Baseline URL
         self.url = "https://github.com/<name>"
         if not os.path.exists(self.repo_path):
             clone_repo(self.url, destination=self.repo_path)
-        self.baseline_config_path = "./baselines/<name>.yaml"
+        self.baseline_config_path = "./baselines/n_vpr_cl.yaml"
         # Load the baseline configuration
         with open(self.baseline_config_path, "r") as file:
             self.baseline_config = yaml.safe_load(file)
         # Create the data output folder
-        self.outdir = "./output/<name>"
+        self.outdir = "./output/n_vpr_cl"
         os.makedirs(self.outdir, exist_ok=True)
 
-    def format_data(self, config, reference, query, timewindow):
+    def format_data(self, config, dataset_config, reference, query, timewindow):
         """
         Format the reference and query data for the baseline.
         """
+        self.config = config
         # Get experimental details
         ref_info = reference.get_dataset_info()
         query_info = query.get_dataset_info()
@@ -51,16 +64,61 @@ class name_baseline(EventBaseline):
         ]
         self.ref_directory = ref_info["file_path"][self.ref_key[0]]
         self.query_directory = query_info["file_path"][self.query_key[0]]
+        self.ref_name = self.ref_key[0]
+        self.query_name = self.query_key[0]
 
-        # Get the reference and query data
-        ref_files = sorted(list(Path(self.ref_directory).glob("*.npy")))
-        query_files = sorted(list(Path(self.query_directory).glob("*.npy")))
+        from pathlib import Path
+        import re
 
-        # Load the reference and query data as numpy arrays
-        self.reference_data = np.array([np.load(ref_file) for ref_file in ref_files])
-        self.query_data = np.array([np.load(query_file) for query_file in query_files])
+        _RX_FRAME = re.compile(r"^frame_(\d+)\.npy$")
 
-        # Set the output folder
+        def list_frame_files(dirpath: str):
+            paths = []
+            for p in Path(dirpath).iterdir():
+                m = _RX_FRAME.fullmatch(p.name)
+                if m:
+                    paths.append((int(m.group(1)), p))
+            paths.sort(key=lambda t: t[0])  # numeric sort
+            return [p for _, p in paths]
+
+        # usage
+        ref_files = list_frame_files(self.ref_directory)
+        query_files = list_frame_files(self.query_directory)
+        # after you have ref_files, query_files and min_gap_sec
+        min_gap_sec = float(config.get("filter_places_sec", 60))
+
+        ref_res = FUNC._apply_time_filter_to_files(
+            ref_files, self.ref_directory, min_gap_sec, debug=False
+        )
+        query_res = FUNC._apply_time_filter_to_files(
+            query_files, self.query_directory, min_gap_sec, debug=False
+        )
+
+        # Replace file lists with filtered ones
+        ref_files = ref_res["files"]
+        query_files = query_res["files"]
+
+        # proceed to load arrays
+        self.reference_data = np.array([np.load(p) for p in ref_files])
+        self.query_data = np.array([np.load(p) for p in query_files])
+
+        # OPTIONAL: Create temporary directory to store converted data, if not using numpy arrays
+        self.temp_dir = tempfile.mkdtemp(prefix="baseline_data_")
+        self.ref_dir = os.path.join(self.temp_dir, ref_name)
+        self.query_dir = os.path.join(self.temp_dir, query_name)
+        self.ref_dir_out = os.path.join(self.temp_dir, f"{ref_name}_denoised")
+        self.query_dir_out = os.path.join(self.temp_dir, f"{query_name}_denoised")
+        os.makedirs(self.ref_dir, exist_ok=True)
+        os.makedirs(self.query_dir, exist_ok=True)
+        os.makedirs(self.ref_dir_out, exist_ok=True)
+        os.makedirs(self.query_dir_out, exist_ok=True)
+
+        # store the reference and query data to the temporary directory
+        for i, arr in enumerate(self.reference_data):
+            np.save(os.path.join(self.ref_dir, f"frame_{i:06d}.npy"), arr)
+        for i, arr in enumerate(self.query_data):
+            np.save(os.path.join(self.query_dir, f"frame_{i:06d}.npy"), arr)
+
         self.output_dir = os.path.join(
             self.outdir,
             f"{ref_info['dataset_name']}",
@@ -69,11 +127,95 @@ class name_baseline(EventBaseline):
         )
         os.makedirs(self.output_dir, exist_ok=True)
 
+    # def format_data(self, config, dataset_config, reference, query, timewindow):
+    #     """
+    #     Format the reference and query data for the baseline.
+    #     """
+    #     # Get experimental details
+    #     ref_info = reference.get_dataset_info()
+    #     query_info = query.get_dataset_info()
+
+    #     ref_name = ref_info["sequence_name"]
+    #     query_name = query_info["sequence_name"]
+
+    #     # from ref_info['file_path'] dict, find the directory that matches ref/query name and timewindow
+    #     self.ref_key = [
+    #         d for d in ref_info["file_path"] if ref_name in d and str(timewindow) in d
+    #     ]
+    #     self.query_key = [
+    #         d
+    #         for d in query_info["file_path"]
+    #         if query_name in d and str(timewindow) in d
+    #     ]
+    #     self.ref_directory = ref_info["file_path"][self.ref_key[0]]
+    #     self.query_directory = query_info["file_path"][self.query_key[0]]
+
+    #     # Get the reference and query data
+    #     ref_files = sorted(list(Path(self.ref_directory).glob("*.npy")))
+    #     query_files = sorted(list(Path(self.query_directory).glob("*.npy")))
+
+    #     # Load the reference and query data as numpy arrays
+    #     self.reference_data = np.array([np.load(ref_file) for ref_file in ref_files])
+    #     self.query_data = np.array([np.load(query_file) for query_file in query_files])
+
+    #     # Set the output folder
+    #     self.output_dir = os.path.join(
+    #         self.outdir,
+    #         f"{ref_info['dataset_name']}",
+    #         f"{ref_info['sequence_name']}_{query_info['sequence_name']}",
+    #         f"{config['frame_generator']}_{timewindow}",
+    #     )
+    #     os.makedirs(self.output_dir, exist_ok=True)
+
     def build_execute(self, config, data_config, ground_truth):
         """
         Build a commandline execute for the baseline with the provided reference, query, and ground truth data.
         """
-        pass
+        # Denoise the images and output them to the temporary directory
+        # Build the command as a single string
+        ref_convert = (
+            # Include command line arugments specific to the baseline
+            f"python utils/eventvlad_denoiser.py "
+            f"--input_dir {self.ref_dir} "
+            f"--model_path baselines/EventVLAD/denoiser_brisbane "
+            f"--save_dir {self.ref_dir_out} "
+            f"--use_gpu "
+            f"--show {0}"
+        )
+        query_convert = (
+            # Include command line arugments specific to the baseline
+            f"python utils/eventvlad_denoiser.py "
+            f"--input_dir {self.query_dir} "
+            f"--model_path baselines/EventVLAD/denoiser_brisbane "
+            f"--save_dir {self.query_dir_out} "
+            f"--use_gpu "
+            f"--show {0}"
+        )
+        # Convert all data to denoised images
+        self.ref_convert_cmd_str = ["pixi", "run", "bash", "-c", ref_convert]
+        result = subprocess.run(self.ref_convert_cmd_str, check=True)
+        print("STDOUT:", result.stdout)
+        if result.stderr:
+            print("STDERR:", result.stderr)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Baseline evaluation failed with return code {result.returncode}"
+            )
+        self.query_convert_cmd_str = ["pixi", "run", "bash", "-c", query_convert]
+        result = subprocess.run(self.query_convert_cmd_str, check=True)
+        print("STDOUT:", result.stdout)
+        if result.stderr:
+            print("STDERR:", result.stderr)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Baseline evaluation failed with return code {result.returncode}"
+            )
+
+    # def build_execute(self, config, data_config, ground_truth):
+    #     """
+    #     Build a commandline execute for the baseline with the provided reference, query, and ground truth data.
+    #     """
+    #     pass
 
     def run(self):
         """
@@ -89,12 +231,19 @@ class name_baseline(EventBaseline):
 
         model = load_simclr_encoder(weights_path="test_model.pth.tar")
 
+        # ref_feats = extract_features(
+        #     model, self.reference_data, batch_size=8, num_workers=4
+        # )
+        # query_feats = extract_features(
+        #     model, self.query_data, batch_size=8, num_workers=4
+        # )
         ref_feats = extract_features(
             model, self.ref_dir_out, batch_size=8, num_workers=4
         )
         query_feats = extract_features(
             model, self.query_dir_out, batch_size=8, num_workers=4
         )
+
         distance_matrix = (1 - (query_feats @ ref_feats.T)).T
 
         # Save the distance matrices
