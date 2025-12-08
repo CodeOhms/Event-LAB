@@ -9,15 +9,21 @@ if not os.path.exists("./baselines/VPR_Tutorial"):
         destination="./baselines/VPR_Tutorial",
     )
 
+from baselines.lens import LENS_baseline
+from baselines.sparse_event import sparse_event_baseline
 from baselines.ensemble import ensemble_baseline
 from baselines.eventvlad import eventvlad_baseline
+from baselines.vprmethods import vprmethods_baseline
 from baselines.n_vpr_cl import n_vpr_cl_baseline
 
 
 def get_baseline_switcher():
     return {
+        "lens": lambda: LENS_baseline(),
+        "sparse_event": lambda: sparse_event_baseline(),
         "ensemble": lambda: ensemble_baseline(),
         "eventvlad": lambda: eventvlad_baseline(),
+        "vprmethods": lambda: vprmethods_baseline(),
         "n_vpr_cl": lambda: n_vpr_cl_baseline(),
     }
 
