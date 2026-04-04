@@ -10,6 +10,7 @@ eventlab = {cmd = "pixi run python eventlab_run.py"}
 getdata = {cmd = "pixi run python eventlab_data.py"}
 batch = {cmd = "pixi run python generate_batch.py batch_config.yaml config.yaml run_batch.sh && pixi run bash run_batch.sh"}
 demo = {cmd = "pixi run python eventlab_run.py eventvlad brisbane_event sunset2 sunrise"}
+n_vpr_cl = {cmd = "pixi run python eventlab_run.py n_vpr_cl brisbane_event sunset2 sunrise"}
 
 [system-requirements]
 cuda = "12"

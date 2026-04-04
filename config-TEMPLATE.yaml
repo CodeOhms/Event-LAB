@@ -3,8 +3,8 @@
 data_path: "{PATH-TO-DATASETS-DIR}" # Path to the datasets directory
 output_path: "./output" # Path to save outputs (results, logs, etc.)
 std_format: "hdf5" # Default format for datasets
-max_frames:       # Maximum frames to generate (null = all)
-chunk_size: 100000  # Events to process at once (memory efficiency)
+max_frames: # Maximum frames to generate (null = all)
+chunk_size: 100000 # Events to process at once (memory efficiency)
 ground_truth_name: "ground_truth" # Path to ground truth files
 
 # Processing options
@@ -32,6 +32,7 @@ VPR-Baselines:
   - "ensemble"
   - "eventvlad"
   - "vprmethods"
+  - "n_vpr_cl"
 
 SLAM-Baselines:
   - "plevio"
