@@ -6,8 +6,6 @@ environments:
     - url: https://conda.anaconda.org/robostack-noetic/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -548,6 +546,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.25.0-py311haee01d2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_6.conda
       - pypi: https://files.pythonhosted.org/packages/49/4a/28911aa8dfd1dee3ebf4ba979d9b5cb190210045e7871187b92bdad63c6b/samna-0.48.4-py3-none-any.whl
+      - pypi: ./baselines/Neuormorphic_VPR_Contrastive_Learning/n_vpr_cl/n_imagenet
       osx-64:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -950,6 +949,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstandard-0.25.0-py311h62e9434_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: https://files.pythonhosted.org/packages/49/4a/28911aa8dfd1dee3ebf4ba979d9b5cb190210045e7871187b92bdad63c6b/samna-0.48.4-py3-none-any.whl
+      - pypi: ./baselines/Neuormorphic_VPR_Contrastive_Learning/n_vpr_cl/n_imagenet
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1352,6 +1352,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.25.0-py311h5bb9006_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: https://files.pythonhosted.org/packages/49/4a/28911aa8dfd1dee3ebf4ba979d9b5cb190210045e7871187b92bdad63c6b/samna-0.48.4-py3-none-any.whl
+      - pypi: ./baselines/Neuormorphic_VPR_Contrastive_Learning/n_vpr_cl/n_imagenet
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_libavif_api-1.3.0-h57928b3_5.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -1737,11 +1738,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zlib-ng-2.2.5-h32d8bfd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstandard-0.25.0-py311hf893f09_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
+      - pypi: ./baselines/Neuormorphic_VPR_Contrastive_Learning/n_vpr_cl/n_imagenet
   e2vid:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -15453,6 +15453,10 @@ packages:
   purls: []
   size: 1369369
   timestamp: 1744124916632
+- pypi: ./baselines/Neuormorphic_VPR_Contrastive_Learning/n_vpr_cl/n_imagenet
+  name: n-imagenet
+  version: 1.0.0
+  sha256: 13b3f1b6192dd05d4c3bd5721015108e0aeb894b0fa867c69f1db45f9e72cb51
 - conda: https://conda.anaconda.org/conda-forge/linux-64/nccl-2.29.3.1-h4d09622_0.conda
   sha256: 632765e3c32166c16e1ed2c85b79dc2e90817db29d0825506158f1d5d6439fb7
   md5: 71546ecb7c830d277af20cac43a5bdd0

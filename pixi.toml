@@ -18,6 +18,9 @@ cuda = "12"
 [environments]
 e2vid = {features = ["e2vid"], no-default-feature = true}
 
+[pypi-dependencies]
+n-imagenet = { path = "baselines/Neuormorphic_VPR_Contrastive_Learning/n_vpr_cl/n_imagenet", editable = false }
+
 [dependencies]
 python = "*"
 pyyaml = "*"
@@ -29,7 +32,7 @@ loguru = "*"
 tqdm = "*"
 openpyxl = "*"
 scipy = "*"
-numpy = "<2"
+numpy = "*"
 h5py = "*"
 matplotlib = "*"
 ros-noetic-rosbag = "*"
@@ -46,7 +49,7 @@ wandb = "*"
 pyarrow = "*"
 fastparquet = "*"
 torchvision = "*"
-huggingface_hub = ">=1.5.0,<2"
+huggingface_hub = "*"
 
 [target.linux-64.dependencies]
 cuda-version = "12.*"
