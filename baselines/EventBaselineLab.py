@@ -8,6 +8,8 @@ from datasets.groundtruths import create_GTtol_by_distance
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
+from utils.functional import create_GTtol
+
 def overlay_matches_on_array(
     array,
     GThard,
@@ -150,12 +152,15 @@ class EventBaseline:
                                 preserve_range=True, anti_aliasing=False)
                     # Apply ground truth tolerance
                     GT = (GT > 0.5).astype(int)
-                r = recallAtK(array, GT, K=k)
+                    GT_tol = create_GTtol(GT, tolerance)
+                else:
+                    GT_tol = create_GTtol(GThard, tolerance)
+                r = recallAtK(array, GT_tol, K=k)
                 recalls.append(np.round(r, 2))
-            
+
             overlay_rgb, preds, tp, fp, fn = overlay_matches_on_array(
                 array=array,
-                GThard=GT,
+                GThard=GT_tol,
                 top_k=1,                 # set to 1 to get single predicted ref per query
                 pred_mode="per_column",  # important: choose 'per_column' to select predictions per query
                 marker_size=20,
@@ -165,7 +170,7 @@ class EventBaseline:
             )
 
             try:
-                P, R = createPR(array, GT, matching='single', n_thresh=100)
+                P, R = createPR(array, GT_tol, matching='single', n_thresh=100)
                 P = np.asarray(P); R = np.asarray(R)
                 idx = np.argsort(R)
                 aupr = float(np.trapz(P[idx], R[idx]))
@@ -191,9 +196,9 @@ class EventBaseline:
 
         if table is not None:
             print(table)
-        
+
         return rows, pr_curves
-    
+
     def save_results(self, rows, pr_curves, run_name, ref_query):
         """
         rows: list[dict] with keys:
@@ -390,7 +395,7 @@ class EventBaseline:
                 ws_sum.cell(row=r, column=hdr_map["n_references"], value=n_refs)
                 ws_sum.cell(row=r, column=hdr_map["n_queries"],    value=n_qs)
             return r
-        
+
         def append_rows_force(ws, headers, rows_to_write):
             hdr = sheet_headers(ws, headers)
 
