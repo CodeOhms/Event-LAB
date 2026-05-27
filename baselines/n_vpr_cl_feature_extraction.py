@@ -2,12 +2,14 @@ import os, glob
 from os.path import isfile
 from collections import OrderedDict
 import torch
+from torch import nn
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from tqdm import tqdm
 import cv2
 
-from .N_VPR_CL.model import SynSSparkEncoder
+from .N_VPR_CL.n_vpr_cl.model import SynSSparkEncoder
+from .N_VPR_CL.n_vpr_cl.utils import get_torch_device
 
 
 class _EventVGGPreprocess(Dataset):
@@ -131,16 +133,20 @@ def _extract_encoder_state(mdl_state_d):
     return encoder_state
 
 
-def load_simclr_encoder(weights_path: str, device=None):
+def load_simclr_encoder(weights_path: str, in_channels=2, device=None):
     assert isfile(weights_path), f"Missing weights file: {weights_path}"
-    dev = _device(device)
+    dev = get_torch_device(device)
 
-    model = SynSSparkEncoder()
+    encoder = SynSSparkEncoder(in_channels=in_channels)
+    model = nn.Sequential(
+        encoder,
+        nn.Flatten(start_dim=1),
+    )
     simclr_save = torch.load(weights_path)
     mdl_state_dict = _remap_state_keys(simclr_save["state_dict"])
     mdl_state_dict = _extract_encoder_state(mdl_state_dict)
-    model.load_state_dict(mdl_state_dict, strict=True)
-    return model
+    encoder.load_state_dict(mdl_state_dict, strict=True)
+    return model.to(dev).eval()
 
 
 @torch.inference_mode()
@@ -152,7 +158,7 @@ def extract_features(
     device=None,
     rgb_input=True,
 ):
-    dev = _device(device)
+    dev = get_torch_device(device)
     model = model.to(dev).eval()
 
     image_list = _coerce_items(images_dir)
@@ -171,9 +177,24 @@ def extract_features(
     )
 
     feats = []
-    for batch in tqdm(dl, desc="EventVLAD", leave=False):
+    for batch in tqdm(dl, desc="N_VPR_CL features", leave=False):
         batch = batch.to(dev, non_blocking=True)
         out = model(batch)  # may be [B, D] or [D] when B==1
+        if out.dim() == 1:  # <— ensure 2-D
+            out = out.unsqueeze(0)  # -> [1, D]
+        out_cpu = out.detach().cpu().to(torch.float32).numpy()
+        feats.append(out_cpu)
+
+    return np.concatenate(feats, axis=0)  # now all chunks are [b_i, D]
+
+
+def extract_features_h5(model, h5_batch_it, device=None):
+    device = get_torch_device(device)
+    feats = []
+    for batch in tqdm(h5_batch_it, desc="N_VPR_CL features", leave=False):
+        batch = torch.from_numpy(batch)
+        batch = batch.to(device, non_blocking=True)
+        out = model(batch.permute(0, 3, 1, 2))  # may be [B, D] or [D] when B==1
         if out.dim() == 1:  # <— ensure 2-D
             out = out.unsqueeze(0)  # -> [1, D]
         out_cpu = out.detach().cpu().to(torch.float32).numpy()

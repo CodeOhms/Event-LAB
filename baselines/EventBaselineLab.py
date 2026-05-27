@@ -151,9 +151,11 @@ class EventBaseline:
                                 preserve_range=True, anti_aliasing=False)
                     # Apply ground truth tolerance
                     GT = (GT > 0.5).astype(int)
+                else:
+                    GT = GThard
                 r = recallAtK(array, GT, K=k)
                 recalls.append(np.round(r, 2))
-            
+
             overlay_rgb, preds, tp, fp, fn = overlay_matches_on_array(
                 array=array,
                 GThard=GT,
@@ -194,7 +196,7 @@ class EventBaseline:
                 logger.info("\n{}", table.get_string())
 
         return rows, pr_curves
-    
+
     def save_results(self, rows, pr_curves, run_name, ref_query):
         """
         rows: list[dict] with keys:
@@ -391,7 +393,7 @@ class EventBaseline:
                 ws_sum.cell(row=r, column=hdr_map["n_references"], value=n_refs)
                 ws_sum.cell(row=r, column=hdr_map["n_queries"],    value=n_qs)
             return r
-        
+
         def append_rows_force(ws, headers, rows_to_write):
             hdr = sheet_headers(ws, headers)
 
